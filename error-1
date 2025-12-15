@@ -1,0 +1,35 @@
+Error: Terraform does not have the necessary permissions to register Resource Providers.
+│ Terraform automatically attempts to register the Azure Resource Providers it supports, to
+│ ensure it is able to provision resources.
+│ If you don't have permission to register Resource Providers you may wish to disable this
+│ functionality by adding the following to the Provider block:
+│ 
+│ provider "azurerm" {
+│   resource_provider_registrations = "none"
+│ }
+│ 
+│ Please note that if you opt out of Resource Provider Registration and Terraform tries
+│ to provision a resource from a Resource Provider which is unregistered, then the errors
+│ may appear misleading - for example:
+│
+│ > API version 2019-XX-XX was not found for Microsoft.Foo
+│
+│ Could suggest that the Resource Provider "Microsoft.Foo" requires registration, but
+│ this could also indicate that this Azure Region doesn't support this API version.
+│
+│ More information on the "resource_provider_registrations" property can be found here:
+│ https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs#resource-provider-registrations
+│
+│ Encountered the following errors:
+│
+│ authorization failed: registering resource provider "Microsoft.DesktopVirtualization": unexpected status 403 (403 Forbidden) with error: AuthorizationFailed: The client 'cloud_user_p_786c73f8@realhandsonlabs.com' with object id '86be4a45-c5b3-4abf-b79f-eca9de98704b' does not have authorization to perform action 'Microsoft.DesktopVirtualization/register/action' over scope '/subscriptions/0cfe2870-d256-4119-b0a3-16293ac11bdc' or the scope is invalid. If access was recently granted, please refresh your credentials.
+│ authorization failed: registering resource provider "Microsoft.DataProtection": unexpected status 403 (403 Forbidden) with error: AuthorizationFailed: The client 'cloud_user_p_786c73f8@realhandsonlabs.com' with object id '86be4a45-c5b3-4abf-b79f-eca9de98704b' does not have authorization to perform action 'Microsoft.DataProtection/register/action' over scope '/subscriptions/0cfe2870-d256-4119-b0a3-16293ac11bdc' or the scope is invalid. If access was recently granted, please refresh your credentials.
+│ authorization failed: registering resource provider "Microsoft.AVS": unexpected status 403 (403 Forbidden) with error: AuthorizationFailed: The client 'cloud_user_p_786c73f8@realhandsonlabs.com' with object id '86be4a45-c5b3-4abf-b79f-eca9de98704b' does not have authorization to perform action 'Microsoft.AVS/register/action' over scope '/subscriptions/0cfe2870-d256-4119-b0a3-16293ac11bdc' or the scope is invalid. If access was recently granted, please refresh your credentials.     
+│ authorization failed: registering resource provider "Microsoft.AppPlatform": unexpected status 403 (403 Forbidden) with error: AuthorizationFailed: The client 'cloud_user_p_786c73f8@realhandsonlabs.com' with object id '86be4a45-c5b3-4abf-b79f-eca9de98704b' does not have authorization to perform action 'Microsoft.AppPlatform/register/action' over scope '/subscriptions/0cfe2870-d256-4119-b0a3-16293ac11bdc' or the scope is invalid. If access was recently granted, please refresh your credentials.
+│
+│   with provider["registry.terraform.io/hashicorp/azurerm"],
+│   on main.tf line 1, in provider "azurerm":
+│    1: provider "azurerm" {
+│
+╵
+PS C:\Users\lakshmig2\Desktop\genai-chabot-sandbox\terraform> 
