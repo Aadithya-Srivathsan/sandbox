@@ -1,0 +1,214 @@
+variable.tf
+
+variable "existing_rg_name" {
+  description = "Existing Pluralsight sandbox resource group name"
+  type        = string
+}
+
+variable "openai_endpoint" {
+  description = "Azure OpenAI endpoint"
+  type        = string
+}
+
+variable "openai_api_key" {
+  description = "Azure OpenAI API key"
+  type        = string
+  sensitive   = true
+}
+
+
+-----------------------------------------------------------
+
+output.tf
+
+output "function_app_name" {
+  value = azurerm_linux_function_app.genai_function.name
+}
+
+output "function_hostname" {
+  value = azurerm_linux_function_app.genai_function.default_hostname
+}
+
+--------------------------------------------------------------------------------------------------------------------
+
+version.tf
+
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.5"
+    }
+  }
+}
+
+
+----------------------------------------------------------------------------------------------------
+main.tf
+
+provider "azurerm" {
+  features {}
+}
+
+data "azurerm_resource_group" "sandbox" {
+  name = var.existing_rg_name
+}
+
+resource "random_integer" "suffix" {
+  min = 10000
+  max = 99999
+}
+
+resource "azurerm_storage_account" "function_storage" {
+  name                     = "genaifunc${random_integer.suffix.result}"
+  resource_group_name      = data.azurerm_resource_group.sandbox.name
+  location                 = data.azurerm_resource_group.sandbox.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_service_plan" "function_plan" {
+  name                = "genai-func-plan"
+  location            = data.azurerm_resource_group.sandbox.location
+  resource_group_name = data.azurerm_resource_group.sandbox.name
+  os_type             = "Linux"
+  sku_name            = "Y1"
+}
+
+resource "azurerm_linux_function_app" "genai_function" {
+  name                = "genai-chatbot-${random_integer.suffix.result}"
+  location            = data.azurerm_resource_group.sandbox.location
+  resource_group_name = data.azurerm_resource_group.sandbox.name
+  service_plan_id     = azurerm_service_plan.function_plan.id
+
+  storage_account_name       = azurerm_storage_account.function_storage.name
+  storage_account_access_key = azurerm_storage_account.function_storage.primary_access_key
+
+  site_config {
+    application_stack {
+      python_version = "3.10"
+    }
+  }
+
+  app_settings = {
+    FUNCTIONS_WORKER_RUNTIME = "python"
+    OPENAI_ENDPOINT          = var.openai_endpoint
+    OPENAI_API_KEY           = var.openai_api_key
+  }
+}
+
+------------------------------------------------------------------------------------------------------------------
+
+init.py
+
+import azure.functions as func
+import os
+import requests
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    user_message = req.params.get("message")
+
+    if not user_message:
+        return func.HttpResponse(
+            "Usage: ?message=hello",
+            status_code=400
+        )
+
+    endpoint = os.getenv("OPENAI_ENDPOINT")
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    url = f"{endpoint}/openai/responses?api-version=2024-08-01-preview"
+
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": api_key
+    }
+
+    payload = {
+        "model": "gpt-4o-mini",
+        "input": user_message,
+        "max_output_tokens": 150
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+
+    if response.status_code != 200:
+        return func.HttpResponse(
+            f"OpenAI Error: {response.text}",
+            status_code=500
+        )
+
+    data = response.json()
+    reply = data.get("output_text", "No response generated")
+
+    return func.HttpResponse(reply, status_code=200)
+-----------------------------------------------------------------------------------------------------------------------------
+
+function.json
+
+{
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": ["get", "post"]
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "$return"
+    }
+  ]
+}
+------------------------------------------------------------------------------------------------------------------
+
+requirement.txt
+
+azure-functions
+requests
+----------------------------------------------
+
+readme.md
+
+# GenAI Chatbot – Azure Function (Pluralsight Sandbox)
+
+## Architecture
+- Azure Function (Python 3.10)
+- Azure OpenAI Responses API
+- Terraform
+- Pluralsight Azure Sandbox
+
+## Sandbox Rules
+- Do NOT create resource groups
+- Do NOT create service principals
+- Use existing sandbox RG only
+
+## Deploy
+cd terraform
+terraform init
+terraform apply
+
+## Test
+https://<function-hostname>/api/<function-name>?message=hello
+--------------------------------------------------------------------
+.gitignore
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Python
+__pycache__/
+*.pyc
+
+
