@@ -1,0 +1,56 @@
+import azure.functions as func
+import os
+import json
+import urllib.request
+
+app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+@app.route(route="chat", methods=["GET"])
+def chat(req: func.HttpRequest) -> func.HttpResponse:
+    user_message = req.params.get("message")
+
+    if not user_message:
+        return func.HttpResponse(
+            "Please pass ?message=hello",
+            status_code=400
+        )
+
+    endpoint = os.getenv("OPENAI_ENDPOINT")
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if not endpoint or not api_key:
+        return func.HttpResponse(
+            "OpenAI configuration missing",
+            status_code=500
+        )
+
+    url = f"{endpoint}/openai/responses?api-version=2024-08-01-preview"
+
+    payload = {
+        "model": "gpt-4o-mini",
+        "input": user_message,
+        "max_output_tokens": 150
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+
+    request = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "api-key": api_key
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(request) as response:
+            result = json.loads(response.read().decode())
+            reply = result.get("output_text", "No response")
+            return func.HttpResponse(reply, status_code=200)
+
+    except Exception as e:
+        return func.HttpResponse(
+            str(e),
+            status_code=500
+        )
