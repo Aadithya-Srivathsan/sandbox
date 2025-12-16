@@ -1,0 +1,14 @@
+from openai import AzureOpenAI
+
+client = AzureOpenAI(
+    azure_endpoint="https://learning-openai.openai.azure.com/",
+    api_key="YOUR_KEY",
+    api_version="2025-03-01-preview",
+)
+
+response = client.responses.create(
+    model="YOUR_DEPLOYMENT_NAME",
+    input="hello"
+)
+
+print(response)
