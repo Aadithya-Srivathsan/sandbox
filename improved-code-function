@@ -1,0 +1,69 @@
+import azure.functions as func
+import os
+import json
+import urllib.request
+import urllib.error
+
+app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+@app.route(route="chat", methods=["GET"])
+def chat(req: func.HttpRequest) -> func.HttpResponse:
+    user_message = req.params.get("message")
+
+    if not user_message:
+        return func.HttpResponse(
+            "Please pass ?message=hello",
+            status_code=400
+        )
+
+    endpoint = os.getenv("OPENAI_ENDPOINT")
+    api_key = os.getenv("OPENAI_API_KEY")
+    deployment = os.getenv("OPENAI_DEPLOYMENT_NAME")
+
+    if not endpoint or not api_key or not deployment:
+        return func.HttpResponse(
+            "Missing OPENAI_ENDPOINT, OPENAI_API_KEY, or OPENAI_DEPLOYMENT_NAME",
+            status_code=500
+        )
+
+    url = f"{endpoint}/openai/responses?api-version=2024-08-01-preview"
+
+    payload = {
+        "model": deployment,
+        "input": user_message,
+        "max_output_tokens": 150
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+
+    request = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "api-key": api_key
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(request) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            reply = result["output"][0]["content"][0]["text"]
+
+            return func.HttpResponse(
+                reply,
+                status_code=200,
+                mimetype="text/plain"
+            )
+
+    except urllib.error.HTTPError as e:
+        return func.HttpResponse(
+            f"OpenAI HTTP error: {e.read().decode()}",
+            status_code=500
+        )
+
+    except Exception as e:
+        return func.HttpResponse(
+            f"Unexpected error: {str(e)}",
+            status_code=500
+        )
