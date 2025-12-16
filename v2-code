@@ -1,0 +1,36 @@
+import os
+import azure.functions as func
+from openai import AzureOpenAI
+
+app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+client = AzureOpenAI(
+    azure_endpoint=os.environ["OPENAI_ENDPOINT"],
+    api_key=os.environ["OPENAI_API_KEY"],
+    api_version="2024-02-15-preview",
+)
+
+@app.route(route="chat", methods=["GET"])
+def chat(req: func.HttpRequest) -> func.HttpResponse:
+    user_message = req.params.get("message")
+
+    if not user_message:
+        return func.HttpResponse(
+            "Please pass ?message=hello",
+            status_code=400
+        )
+
+    response = client.chat.completions.create(
+        model=os.environ["OPENAI_DEPLOYMENT_NAME"],
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": user_message}
+        ],
+        temperature=0.7,
+        max_tokens=300
+    )
+
+    return func.HttpResponse(
+        response.choices[0].message.content,
+        status_code=200
+    )
