@@ -1,0 +1,6 @@
+sudo tee /etc/profile.d/openai.sh <<'EOF'
+export OPENAI_ENDPOINT="https://learning-openai.openai.azure.com/"
+export OPENAI_API_KEY="YOUR_OPENAI_KEY_HERE"
+export OPENAI_DEPLOYMENT_NAME="gpt-4o-mini"
+EOF
+
