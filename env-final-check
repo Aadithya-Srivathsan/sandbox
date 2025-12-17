@@ -1,0 +1,44 @@
+sudo tee /etc/profile.d/azure_openai.sh << 'EOF'
+export AZURE_OPENAI_ENDPOINT="https://learning-openai.openai.azure.com/"
+export AZURE_OPENAI_API_KEY="YOUR_API_KEY_HERE"
+export AZURE_OPENAI_DEPLOYMENT="gpt-4o-mini"
+EOF
+
+########################################
+
+cat << 'EOF' > app.py
+import os
+from flask import Flask, request, jsonify
+from openai import AzureOpenAI
+
+app = Flask(__name__)
+
+# Azure OpenAI client
+client = AzureOpenAI(
+    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    api_version="2025-03-01-preview"
+)
+
+DEPLOYMENT = os.environ["AZURE_OPENAI_DEPLOYMENT"]
+
+@app.route("/")
+def home():
+    return open("index.html").read()
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    data = request.get_json()
+    user_message = data.get("message", "")
+
+    response = client.responses.create(
+        model=DEPLOYMENT,
+        input=user_message
+    )
+
+    reply = response.output_text
+    return jsonify({"reply": reply})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+EOF
